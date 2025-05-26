@@ -1,0 +1,142 @@
+<style>
+    @media print {
+        body {
+            margin: 0;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        thead {
+            display: table-header-group;
+        }
+
+        /* Extra: agar kabhi hide karna ho print me */
+        .hide-on-print {
+            display: none !important;
+        }
+        div.page:nth-of-type(3) {
+            display: none !important;
+        }
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        margin-bottom: 30px;
+    }
+
+    th, td {
+        border: 1px solid #000;
+        padding: 6px;
+        text-align: right;
+    }
+
+    th:first-child, td:first-child {
+        text-align: left;
+    }
+
+    .logo {
+        width: 100%;
+        max-height: 100px;
+    }
+
+    .meta-info, .sub-header {
+        font-size: 12px;
+        text-align: left;
+    }
+
+    .meta-info {
+        text-align: right;
+    }
+
+    .header-section {
+        text-align: left;
+    }
+    .page-break {
+        page-break-before: always;
+    }
+</style>
+
+{% let groupedData = {}; %}
+{% data.forEach(row => {
+    if (!groupedData[row.party]) groupedData[row.party] = [];
+    groupedData[row.party].push(row);
+}); %}
+
+{% const rowsPerPage = 20; %}
+{% let customerKeys = Object.keys(groupedData); %}
+
+{% customerKeys.forEach((party, idx) => { %}
+    {% let rows = groupedData[party]; %}
+    {% let totalPages = Math.ceil(rows.length / rowsPerPage); %}
+    {% let running_total = 0; %}
+
+    {% for (let pageNum = 0; pageNum < totalPages; pageNum++) { %}
+        {% let start = pageNum * rowsPerPage; %}
+        {% let end = start + rowsPerPage; %}
+        {% let pageRows = rows.slice(start, end); %}
+
+        <div class="page">
+            {% if (pageNum > 0 || idx > 0) { %}
+                <div class="page-break"></div>
+            {% } %}
+
+            <table>
+                <thead>
+                    <tr>
+                        <td colspan="9" style="border: none;">
+                            <img class="logo" src="/assets/alhaya_formats/images/header.png" alt="Logo" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="5" class="sub-header" style="border: none;">
+                            <strong>As On:</strong> {{ frappe.format(filters.report_date, {"fieldtype": "Date"}) }}<br>
+                            <strong>Cust ID:</strong> {{ party }}<br>
+                            <strong>Cust Name:</strong> {{ rows[0].customer_name }}
+                        </td>
+                        <td colspan="4" class="meta-info" style="border: none;">
+                            <!-- <strong>Page:</strong> {{ pageNum + 1 }} of {{ totalPages }}<br> -->
+                            <strong>Print Date:</strong> {{ frappe.datetime.nowdate() }}<br>
+                            <strong>Print Time:</strong> {{ frappe.datetime.now_time() }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Date</th>
+                        <th>Age (Days)</th>
+                        <th>Trans Type</th>
+                        <th>T.Ref</th>
+                        <th>Amount</th>
+                        <th>Paid Amount</th>
+                        <th>Credit Note</th>
+                        <th>Outstanding</th>
+                        <th>Running Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% pageRows.forEach(row => { %}
+                        {% running_total += row.outstanding; %}
+                        <tr>
+                            <td>{{ frappe.format(row.posting_date, { "fieldtype": "Date" }) }}</td>
+                            <td>{{ row.age }}</td>
+                            <td style="text-align: left;">{{ row.voucher_type }}</td>
+                            <td style="text-align: left;">{{ row.doc_ref }}</td>
+                            <td>{{ frappe.format(row.invoiced, { "fieldtype": "Currency" }) }}</td>
+                            <td>{{ frappe.format(row.paid, { "fieldtype": "Currency" }) }}</td>
+                            <td>{{ frappe.format(row.credit_note, { "fieldtype": "Currency" }) }}</td>
+                            <td>{{ frappe.format(row.outstanding, { "fieldtype": "Currency" }) }}</td>
+                            <td>{{ frappe.format(running_total, { "fieldtype": "Currency" }) }}</td>
+                        </tr>
+                    {% }); %}
+                </tbody>
+            </table>
+        </div>
+    {% } %}
+{% }); %}
